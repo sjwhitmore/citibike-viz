@@ -47,25 +47,6 @@ def get_db():
     """
     bikedata = pd.DataFrame.from_csv("test.csv", index_col=11, header=0,infer_datetime_format=False)
     #print bikedata
-    # fix headers
-    '''bikedata["startstationid"] = bikedata["start station id"]
-    bikedata["startstationname"] = bikedata["start station name"]
-    bikedata["startstationlat"] = bikedata["start station latitude"]
-    bikedata["startstationlong"] = bikedata["start station longitude"]
-    bikedata["endstationid"] = bikedata["end station id"]
-    bikedata["endstationname"] = bikedata["end station name"]
-    bikedata["endstationlat"] = bikedata["end station latitude"]
-    bikedata["endstationlong"] = bikedata["end station longitude"]
-    bikedata["birthyear"] = bikedata["birth year"]
-    del bikedata["start station id"]
-    del bikedata["start station name"]
-    del bikedata["start station latitude"]
-    del bikedata["start station longitude"]
-    del bikedata["end station id"]
-    del bikedata["end station name"]
-    del bikedata["end station latitude"]
-    del bikedata["end station longitude"]
-    del bikedata["birth year"]'''
     
     def pdconvert(dte):
         #datestring = pd.datetools.parse(dte).strftime('%Y%m%dT%H:%M%SZ')
