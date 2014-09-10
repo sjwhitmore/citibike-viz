@@ -19,15 +19,11 @@
     <a class="reset" href="javascript:myChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 </div>
 
-<aside id="totals"><span id="active">-</span> of <span id="total">-</span> flights selected.</aside>
-
-<div id="lists">
-  <div id="bike-list" class="list"></div>
-</div>
-
 
 </div>
-<div id="chart-line-hitsperday"></div>
+<div id="day-totals"></div>
+<div id="hourly-avg"></div>
+<div id="trip-duration"></div>
 
 <div style='clear:both;'>
     <table id="dc-data-table">
@@ -37,7 +33,8 @@
         <th>Start Station</th>
         <th>End Station</th>
         <th>Trip Duration</th>
-        <th>Gender</th>
+
+
       </tr>
       </thead>
     </table>
@@ -56,16 +53,17 @@
 <script>
 
 //request data from server
-d3.xhr("/next_data", function(error, bikeresp) {
+d3.csv("2013-07 - Citi Bike trip data.csv", function(bikeresp) {
   console.log(bikeresp);
   console.log(bikeresp.response);
-  bikedata = JSON.parse ( bikeresp.response );
+  //bikedata = JSON.parse ( bikeresp.response );
+  bikedata = bikeresp;
   var parseDate = d3.time.format("%m/%d/%Y").parse;
   //bikedata = bikeresp.response;
   bikedata.forEach(function (d) {
         d.startdate = new Date(d.start);
         d.enddate = new Date(d.end);
-        d.month = d3.time.month(d.startdate);
+        d.total = 1;
     });
   window.data = bikedata;
   console.log(bikedata);
@@ -91,9 +89,11 @@ d3.xhr("/next_data", function(error, bikeresp) {
   var bike = crossfilter(bikedata);
   var all = bike.groupAll();
   var date = bike.dimension(function(d) { return d.startdate; });
-  var dates = date.group(d3.time.day);
-  //var hour = bike.dimension(function(d) { return formatTime(new Date(d.start)); })
-  //var hours = hour.group(d3.time.hour);
+  var hour = bike.dimension(function(d) { return d.startdate.getHours(); });
+  var dates = date.group(d3.time.month && d3.time.day);
+  var hours = hour.group();
+  var tripDuration = bike.dimension(function(d) {return Math.round(d.tripduration/60); });
+  var tripDurationGroup = tripDuration.group();
   var gender = bike.dimension(function(d) { return d.gender; });
   var startstation = bike.dimension(function(d) {return d.startstationname; });
   var endstation = bike.dimension(function(d) {return d.endstationname; });
@@ -105,41 +105,78 @@ d3.xhr("/next_data", function(error, bikeresp) {
     });
   var dayOfWeekGroup = dayOfWeek.group();
 
-  console.log("did that");
-  console.log(bike);
-  console.log(dates);
-
   console.log("-- group by date");
     dates.top(Infinity).forEach(function(p, i) {
       console.log(p.key + ": " + p.value);
     });
     console.log("");
-  console.log("-- group by start");
-    var groupByStart = startstation.group();
-    groupByStart.top(Infinity).forEach(function(p, i) {
-      console.log(p.key + ": " + p.value);
-    });
-    console.log("");
-  console.log("-- group by end");
-    var groupByEnd = endstation.group();
-    groupByEnd.top(Infinity).forEach(function(p, i) {
-      console.log(p.key + ": " + p.value);
-    });
-    console.log("");
 
 
-  var hits = date.group().reduceSum(dc.pluck('tripduration')); 
+  var ridesPerDay = dates.reduceSum(dc.pluck('total')); 
+  var ridesPerHour = hours.reduceSum(dc.pluck('total'));
   var minDate = date.bottom(1)[0].startdate;
   var maxDate = date.top(1)[0].startdate;
-  var hitslineChart  = dc.lineChart("#chart-line-hitsperday"); 
+  var dayTotals = dc.lineChart("#day-totals"); 
+  var hourlyAvg = dc.barChart("#hourly-avg");
   //var dataTable =  dc.dataTable(".dc-data-table");
   var dataTable =  dc.dataTable("#dc-data-table");
+  var tripDurationAvg = dc.barChart("#trip-duration");
 
-  hitslineChart
-    .width(500).height(200)
+  console.log("test");
+
+  dayTotals
+    .width(850).height(200)
     .dimension(date)
-    .group(hits)
-    .x(d3.time.scale().domain([minDate,maxDate])); 
+    .group(ridesPerDay)
+    .x(d3.time.scale().domain([minDate,maxDate]))
+    .yAxisLabel("Rides per day")
+    .xAxisLabel("Date");
+
+  hourlyAvg
+    .width(420)
+    .height(180)
+    .margins({top: 10, right: 50, bottom: 30, left: 40})
+    .dimension(hour)
+    .group(ridesPerHour)
+    .elasticY(true)
+    .centerBar(true)
+    .gap(1)
+    .round(dc.round.floor)
+    .alwaysUseRounding(true)
+    .x(d3.scale.linear().domain([0,24]))
+    .renderHorizontalGridLines(true)
+    .yAxisLabel("Rides per hour")
+    .xAxisLabel("Hour")
+    .filterPrinter(function (filters) {
+        var filter = filters[0], s = "";
+        s += numberFormat(filter[0]) + "% -> " + numberFormat(filter[1]) + "%";
+        return s;
+    });
+
+  hourlyAvg.xAxis().tickFormat(
+      function (v) { return v; });
+  hourlyAvg.yAxis().ticks(5);
+
+  tripDurationAvg
+    .width(420)
+    .height(180)
+    .margins({top: 10, right: 50, bottom: 30, left: 40})
+    .dimension(tripDuration)
+    .group(tripDurationGroup)
+    .elasticY(true)
+    .centerBar(true)
+    .gap(1)
+    .round(dc.round.floor)
+    .alwaysUseRounding(true)
+    .x(d3.scale.linear().domain([0,60]))
+    .renderHorizontalGridLines(true)
+    .yAxisLabel("Number of trips")
+    .xAxisLabel("Minutes")
+    .filterPrinter(function (filters) {
+        var filter = filters[0], s = "";
+        s += numberFormat(filter[0]) + "% -> " + numberFormat(filter[1]) + "%";
+        return s;
+    });
 
   dataTable
         .dimension(date)
@@ -149,7 +186,7 @@ d3.xhr("/next_data", function(error, bikeresp) {
         .size(10) // (optional) max number of records to be shown, :default = 25
         .columns([
             function (d) {
-                return d.startdate;
+                return formatDate(d.startdate);
             },
             function (d) {
                 return d.startstationname;
@@ -171,12 +208,11 @@ d3.xhr("/next_data", function(error, bikeresp) {
         .renderlet(function (table) {
             table.selectAll(".dc-table-group").classed("info", true);
         });
-        console.log("doing stuff");
+
 
         dc.renderAll();
-        console.log("doing stuff 2");
+
         dc.redrawAll();
-        console.log("doing stuff 3");
 
 
 

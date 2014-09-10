@@ -43,30 +43,13 @@ class DateEncoder(json.JSONEncoder):
 
 #gets a database connection if one does not already exist
 def get_db():
-    """Opens a csv to give us db connection.
+    """Opens a pickled DataFrame to give us db connection.
     """
-    bikedata = pd.DataFrame.from_csv("test.csv", index_col=11, header=0,infer_datetime_format=False)
-    #print bikedata
-    
-    def pdconvert(dte):
-        #datestring = pd.datetools.parse(dte).strftime('%Y%m%dT%H:%M%SZ')
-        return pd.datetools.parse(dte)
-
-
-    start = list(bikedata.starttime)
-    end = list(bikedata.stoptime)
-    bikedata['start'] = map(pdconvert,start)
-    bikedata['end'] = map(pdconvert,end)
-    del bikedata['starttime']
-    del bikedata['stoptime']
-
-
-    print bikedata
-
+   
+    bikedata = pickle.load(open("bikedata.pkl", "rb"))
     ##jsonbikedata = json.dumps(bikedata.values.tolist(), cls=DateEncoder)
-    jsonbikedata = bikedata.to_json(date_format="iso", orient="records")
-    #print jsonbikedata
-    return jsonbikedata
+
+    return bikedata
 
 
 @app.route('/')
@@ -81,8 +64,9 @@ def index():
 def getdata():
     # get dataset slice
     bikedata = get_db()
+    jsonbikedata = bikedata[1:100000].to_json(date_format="iso", orient="records")
     print "this is working ok!"
-    return bikedata
+    return jsonbikedata
 
 
 if __name__ == '__main__':
