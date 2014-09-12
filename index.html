@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html class="no-js" data-ng-app="cdApp">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF8">
+<title>Crossfilter</title>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css">
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/dc/1.7.0/dc.css">
+<style>
+
+</style>
+</head>
+<body>
+
+<h1>Citibike Data</h1>
+
+
+<div id="chart">
+    <a class="reset" href="javascript:myChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+</div>
+
+
+</div>
+<div id="day-totals"></div>
+<div id="hourly-avg"></div>
+<div id="trip-duration"></div>
+
+<div style='clear:both;'>
+    <table id="dc-data-table">
+      <thead>
+      <tr class="header">
+        <th>Start Date</th>
+        <th>Start Station</th>
+        <th>End Station</th>
+        <th>Trip Duration</th>
+
+
+      </tr>
+      </thead>
+    </table>
+</div> 
+
+<script src="http://cdn.binaryjs.com/0/binary.js"></script>
+<script src="http://code.jquery.com/jquery-latest.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.11/d3.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/crossfilter/1.3.7/crossfilter.min.js"></script>
+<script src="http://dc-js.github.io/dc.js/js/dc.js"></script>
+
+<!-- anchor div for data table -->
+
+    
+<script>
+
+var bikedata = [];
+var leftover = "";
+var bike = crossfilter();
+var all = bike.groupAll();
+var date = bike.dimension(function(d) { return d.startdate; });
+var hour = bike.dimension(function(d) { return d.startdate.getHours(); });
+var dates = date.group(d3.time.month && d3.time.day);
+var hours = hour.group();
+var tripDuration = bike.dimension(function(d) {return Math.round(d.tripduration/60); });
+var tripDurationGroup = tripDuration.group();
+var gender = bike.dimension(function(d) { return d.gender; });
+var startstation = bike.dimension(function(d) {return d.startstationname; });
+var endstation = bike.dimension(function(d) {return d.endstationname; });
+
+var formatNumber = d3.format(",d"),
+formatChange = d3.format("+,d"),
+formatDate = d3.time.format("%B %d, %Y"),
+formatTime = d3.time.format("%I:%M %p");
+
+function updateCharts() {  
+
+  var ridesPerDay = dates.reduceSum(dc.pluck('total')); 
+  var ridesPerHour = hours.reduceSum(dc.pluck('total'));
+  var minDate = date.bottom(1)[0].startdate;
+  var maxDate = date.top(1)[0].startdate;
+  var dayTotals = dc.lineChart("#day-totals"); 
+  var hourlyAvg = dc.barChart("#hourly-avg");
+  var dataTable =  dc.dataTable("#dc-data-table");
+  var tripDurationAvg = dc.barChart("#trip-duration");
+
+  dayTotals
+    .width(850).height(200)
+    .dimension(date)
+    .group(ridesPerDay)
+    .x(d3.time.scale().domain([minDate,maxDate]))
+    .yAxisLabel("Rides per day")
+    .xAxisLabel("Date");
+
+  hourlyAvg
+    .width(420)
+    .height(180)
+    .margins({top: 10, right: 50, bottom: 30, left: 40})
+    .dimension(hour)
+    .group(ridesPerHour)
+    .elasticY(true)
+    .centerBar(true)
+    .gap(1)
+    .round(dc.round.floor)
+    .alwaysUseRounding(true)
+    .x(d3.scale.linear().domain([0,24]))
+    .renderHorizontalGridLines(true)
+    .yAxisLabel("Rides per hour")
+    .xAxisLabel("Hour")
+    .filterPrinter(function (filters) {
+        var filter = filters[0], s = "";
+        s += numberFormat(filter[0]) + "% -> " + numberFormat(filter[1]) + "%";
+        return s;
+    });
+
+  hourlyAvg.xAxis().tickFormat(
+      function (v) { return v; });
+  hourlyAvg.yAxis().ticks(5);
+
+  tripDurationAvg
+    .width(420)
+    .height(180)
+    .margins({top: 10, right: 50, bottom: 30, left: 40})
+    .dimension(tripDuration)
+    .group(tripDurationGroup)
+    .elasticY(true)
+    .centerBar(true)
+    .gap(1)
+    .round(dc.round.floor)
+    .alwaysUseRounding(true)
+    .x(d3.scale.linear().domain([0,60]))
+    .renderHorizontalGridLines(true)
+    .yAxisLabel("Number of trips")
+    .xAxisLabel("Minutes")
+    .filterPrinter(function (filters) {
+        var filter = filters[0], s = "";
+        s += numberFormat(filter[0]) + "% -> " + numberFormat(filter[1]) + "%";
+        return s;
+    });
+
+  dataTable
+    .dimension(date)
+    .group(function (d) {
+        return d.startdate;
+    })
+    .size(10) // (optional) max number of records to be shown, :default = 25
+    .columns([
+        function (d) {
+            return formatDate(d.startdate);
+        },
+        function (d) {
+            return d.startstationname;
+        },
+        function (d) {
+            return d.endstationname;
+        },
+        function (d) {
+            return d.tripduration;
+        }
+    ])
+    .sortBy(function (d) {
+        return d.startdate;
+    })
+    .order(d3.ascending)
+    .renderlet(function (table) {
+        table.selectAll(".dc-table-group").classed("info", true);
+    });
+
+  // var dayOfWeek = bike.dimension(function (d) {
+  //       var day = d.startdate.getDay();
+  //       var name=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  //       return day+"."+name[day];
+  //   });
+  // var dayOfWeekGroup = dayOfWeek.group();
+
+    dc.renderAll();
+    dc.redrawAll();
+}; 
+
+ // Connect to Binary.js server
+var client = new BinaryClient('ws://localhost:9000');
+    // Received new stream from server!
+  client.on('stream', function(stream, meta){
+
+    //setInterval("updateCharts()", 10000);
+
+    ticker = 0;
+
+      // Got new data
+    stream.on('data', function(transportdata){
+      receivedData = String.fromCharCode.apply(null, new Uint8Array(transportdata));
+      parts = receivedData.split('},{');
+      //console.log(parts);
+
+      if (leftover === "") {
+        var total = "[{";
+      }
+      else if (leftover[0] === "{") {
+        var total = "[";
+      }
+      else {
+        var total = "[{";
+      }
+
+      total = total.concat(leftover);
+
+      if (parts[0][0] === "{") {
+        total = "[";
+      }
+      for (i=0; i<parts.length - 2; i++) {
+        total = total.concat(parts[i]);
+        total = total.concat('},{')
+      }
+      total = total.concat(parts[parts.length-2]);
+      total = total.concat('}]')
+      leftover = parts[parts.length - 1];
+      //console.log("this is total:")
+      //console.log( total );
+      //console.log("this is leftover:")
+      //console.log( leftover );
+
+      try {data = JSON.parse( total );}
+      catch(err) {console.log(total);}
+
+      data.forEach(function (d) {
+        d.startdate = new Date(d.starttime);
+        d.enddate = new Date(d.stoptime);
+        d.total = 1;
+      });
+      bikedata.push(data);
+      bike.add(data);
+
+      if (ticker % 500 == 0) {
+        updateCharts();
+      }
+      ticker++;
+    }),
+
+
+    stream.on('end', function(){
+              
+      dc.renderAll();
+
+      dc.redrawAll();
+    });
+
+
+  });
+
+
+</script>
+
+
+</body>
+
