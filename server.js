@@ -18,6 +18,6 @@ var server = BinaryServer.BinaryServer({port: 9000});
 // Wait for new user connections
 server.on('connection', function(client){
   // Stream a flower as a hello!
-  var file = fs.createReadStream(__dirname + '/test.json');
+  var file = fs.createReadStream(__dirname + '/test3.json');
   client.send(file); 
 });

@@ -2,7 +2,7 @@
 <html class="no-js" data-ng-app="cdApp">
 <head>
 <meta http-equiv="content-type" content="text/html; charset=UTF8">
-<title>Crossfilter</title>
+<title>Citibike Data</title>
 <link rel="stylesheet" href="//code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css">
 <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/dc/1.7.0/dc.css">
@@ -237,10 +237,8 @@ var client = new BinaryClient('ws://localhost:9000');
 
 
     stream.on('end', function(){
-              
-      dc.renderAll();
 
-      dc.redrawAll();
+      updateCharts();
     });
 
 
