@@ -10,8 +10,8 @@ def pdconvert(dte):
 #datestring = pd.datetools.parse(dte).strftime('%Y%m%dT%H:%M%SZ')
     return pd.datetools.parse(dte)
 
-csvfile = open('test.csv', 'r')
-jsonfile = open('test.json', 'w')
+csvfile = open("2014-02 - Citi Bike trip data.csv", 'rU')
+jsonfile = open('febdata.json', 'w')
 
 fieldnames = ("tripduration","starttime","stoptime","startstationid","startstationname","startstationlatitude","startstationlongitude","endstationid","endstationname","endstationlatitude","end stationlongitude","bikeid","usertype","birthyear","gender")
 reader = csv.DictReader( csvfile, fieldnames)

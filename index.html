@@ -66,6 +66,7 @@ var tripDurationGroup = tripDuration.group();
 var gender = bike.dimension(function(d) { return d.gender; });
 var startstation = bike.dimension(function(d) {return d.startstationname; });
 var endstation = bike.dimension(function(d) {return d.endstationname; });
+var startStationGroup = startstation.group();
 
 var formatNumber = d3.format(",d"),
 formatChange = d3.format("+,d"),
@@ -74,14 +75,15 @@ formatTime = d3.time.format("%I:%M %p");
 
 function updateCharts() {  
 
-  var ridesPerDay = dates.reduceSum(dc.pluck('total')); 
-  var ridesPerHour = hours.reduceSum(dc.pluck('total'));
-  var minDate = date.bottom(1)[0].startdate;
-  var maxDate = date.top(1)[0].startdate;
   var dayTotals = dc.lineChart("#day-totals"); 
   var hourlyAvg = dc.barChart("#hourly-avg");
   var dataTable =  dc.dataTable("#dc-data-table");
   var tripDurationAvg = dc.barChart("#trip-duration");
+  var ridesPerDay = dates.reduceSum(dc.pluck('total')); 
+  var ridesPerHour = hours.reduceSum(dc.pluck('total'));
+  var ridesPerStart = startStationGroup.reduceSum(dc.pluck('total'));
+  var minDate = date.bottom(1)[0].startdate;
+  var maxDate = date.top(1)[0].startdate;
 
   dayTotals
     .width(850).height(200)
@@ -138,9 +140,10 @@ function updateCharts() {
     });
 
   dataTable
-    .dimension(date)
+    .dimension(startstation)
     .group(function (d) {
-        return d.startdate;
+        var format = d3.format("02d");
+        return d.startdate.getFullYear() + "/" + format((d.startdate.getMonth() + 1));
     })
     .size(10) // (optional) max number of records to be shown, :default = 25
     .columns([
@@ -154,11 +157,11 @@ function updateCharts() {
             return d.endstationname;
         },
         function (d) {
-            return d.tripduration;
+            return Math.round((d.tripduration)/60);
         }
     ])
     .sortBy(function (d) {
-        return d.startdate;
+        return d.startstationname;
     })
     .order(d3.ascending)
     .renderlet(function (table) {
@@ -228,8 +231,8 @@ var client = new BinaryClient('ws://localhost:9000');
       });
       bikedata.push(data);
       bike.add(data);
-
-      if (ticker % 500 == 0) {
+ 
+      if (ticker % 300 == 0) {
         updateCharts();
       }
       ticker++;
@@ -237,7 +240,6 @@ var client = new BinaryClient('ws://localhost:9000');
 
 
     stream.on('end', function(){
-
       updateCharts();
     });
 
