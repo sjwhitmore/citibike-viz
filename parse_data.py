@@ -10,7 +10,7 @@ def pdconvert(dte):
 #datestring = pd.datetools.parse(dte).strftime('%Y%m%dT%H:%M%SZ')
     return pd.datetools.parse(dte)
 
-csvfile = open("2014-02 - Citi Bike trip data.csv", 'rU')
+csvfile = open("modifiedfeb.csv", 'rU')
 jsonfile = open('febdata.json', 'w')
 
 fieldnames = ("tripduration","starttime","stoptime","startstationid","startstationname","startstationlatitude","startstationlongitude","endstationid","endstationname","endstationlatitude","end stationlongitude","bikeid","usertype","birthyear","gender")
@@ -27,7 +27,7 @@ for row in reader:
 
 csvfile.close()
 jsonfile.close()
-with open('test.json', 'rb+') as f:
+with open('febdata.json', 'rb+') as f:
     f.seek(0,2)                 # end of file
     size=f.tell()               # the size...
     f.truncate(size-1)          # truncate at that size - how ever many characters
